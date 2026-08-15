@@ -35,9 +35,7 @@ function Customers() {
 
     };
     useEffect(() => {
-
-        fetchCustomers();
-
+        void fetchCustomers();
     }, []);
     const handleSaveCustomer = async () => {
         if (
@@ -47,19 +45,31 @@ function Customers() {
             alert("Please fill all fields");
             return;
         }
+        if (!/^[0-9]{10}$/.test(newCustomer.mobileNumber)) {
+
+            alert("Please enter a valid 10-digit mobile number");
+
+            return;
+        }
 
         if (editingId === null) {
-
             try {
-
                 await saveCustomer(newCustomer);
 
                 fetchCustomers();
 
-            } catch (error) {
+                setShowModal(false);
 
+            } catch (error) {
                 console.error(error);
 
+                if (error.response?.data?.message) {
+                    alert(error.response.data.message);
+                } else if (typeof error.response?.data === "string") {
+                    alert(error.response.data);
+                } else {
+                    alert("Mobile number already exists");
+                }
             }
 
         } else {
@@ -68,12 +78,13 @@ function Customers() {
 
                 await updateCustomer(editingId, newCustomer);
 
-                fetchCustomers();
+                await fetchCustomers();
 
             } catch (error) {
 
                 console.error(error);
 
+                alert("Invalid mobile number");
             }
 
         }
@@ -101,7 +112,7 @@ function Customers() {
 
             await deleteCustomer(id);
 
-            fetchCustomers();
+            await fetchCustomers();
 
         } catch (error) {
 

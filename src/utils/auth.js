@@ -24,6 +24,9 @@ export const isLoggedIn = () => {
 };
 
 export const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("roles");
+    localStorage.removeItem("username");
     localStorage.removeItem("user");
     localStorage.removeItem("businessDay");
 };

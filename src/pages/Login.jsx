@@ -17,37 +17,61 @@ function Login() {
     const [username, setUsername] = useState("");
 
     const [password, setPassword] = useState("");
+    const [usernameError, setUsernameError] =
+        useState("");
+
+    const [passwordError, setPasswordError] =
+        useState("");
     const navigate = useNavigate();
 
+
     const handleLogin = async () => {
+
+        setUsernameError("");
+        setPasswordError("");
+
+        if (!username.trim()) {
+            setUsernameError(
+                "Username is required"
+            );
+        }
+
+        if (!password.trim()) {
+            setPasswordError(
+                "Password is required"
+            );
+        }
+
+        if (
+            !username.trim() ||
+            !password.trim()
+        ) {
+            return;
+        }
 
         try {
 
             const response = await login({
-
                 username,
                 password
-
             });
-
-            console.log(response.data);
 
             saveUser(response.data);
 
-            const businessDayResponse = await getCurrentBusinessDay();
+            const businessDayResponse =
+                await getCurrentBusinessDay();
 
-            saveBusinessDay(businessDayResponse.data);
+            saveBusinessDay(
+                businessDayResponse.data
+            );
 
             navigate("/dashboard");
 
-        } catch (error) {
-
-            console.error(error);
-
-            alert("Invalid Username or Password");
-
+        } catch {
+            alert(
+                "Invalid Username or Password"
+            );
         }
-
     };
 
     return (
@@ -98,6 +122,13 @@ function Login() {
                             />
 
                         </div>
+                        {
+                            usernameError && (
+                                <small className="text-danger">
+                                    {usernameError}
+                                </small>
+                            )
+                        }
 
                     </div>
 
@@ -146,6 +177,13 @@ function Login() {
                             </button>
 
                         </div>
+                        {
+                            passwordError && (
+                                <small className="text-danger">
+                                    {passwordError}
+                                </small>
+                            )
+                        }
 
                     </div>
 
