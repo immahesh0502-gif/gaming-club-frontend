@@ -1169,6 +1169,8 @@ function Sessions() {
                                     )}
                                 </p>
 
+
+
                                 <p><b>Payment :</b> {selectedSession.paymentMethod || "Not Paid"}</p>
 
                                 <hr />
