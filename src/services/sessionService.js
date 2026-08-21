@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/sessions";
+const API_URL = "http://localhost:8080/api/sessions";
 
 export const getAllSessions = () => {
     return axios.get(API_URL);
