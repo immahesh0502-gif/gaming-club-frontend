@@ -110,8 +110,8 @@ function Dashboard() {
             running: isRunning("PS5-1")
         },
         {
-            name: "PS5-2",
-            running: isRunning("PS5-2")
+            name: "PS4-1",
+            running: isRunning("PS4-1")
         }
     ];
 

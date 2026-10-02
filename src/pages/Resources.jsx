@@ -83,6 +83,7 @@ function Resources() {
                         <option value="ALL">All Types</option>
                         <option value="TABLE">Table</option>
                         <option value="PS5">PS5</option>
+                        <option value="PS4">PS4</option>
                         <option value="CARROM">Carrom</option>
                     </select>
                 </div>
@@ -138,7 +139,11 @@ function Resources() {
                                 ? "Table"
                                 : resource.type === "CARROM"
                                     ? "Carrom"
-                                    : "PS5"}
+                                    : resource.type === "PS5"
+                                        ? "PS5"
+                                        : resource.type === "PS4"
+                                            ? "PS4"
+                                            : resource.type}
                         </td>
 
                         <td className="text-center">

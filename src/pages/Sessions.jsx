@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "../styles/App.css";
 import houseLogo from "../assets/houseofcue.png";
+import Swal from "sweetalert2";
 import {
     getAllCustomers,
     saveCustomer
@@ -49,6 +50,9 @@ function Sessions() {
 
     const [selectedSession, setSelectedSession] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState("CASH");
+
+    const [cashAmount, setCashAmount] = useState("");
+    const [upiAmount, setUpiAmount] = useState("");
 
     const [showReceipt, setShowReceipt] = useState(false);
     const [customers, setCustomers] = useState([]);
@@ -243,42 +247,126 @@ function Sessions() {
 
         try {
 
+            const selected = sessions.find(
+                s => s.id === selectedSession
+            );
+
+            if (!selected) {
+                alert("Session not found.");
+                return;
+            }
+
+            const totalAmount = Number(
+                selected.totalAmount || 0
+            );
+
+            let cash = 0;
+            let upi = 0;
+
+            if (paymentMethod === "CASH") {
+
+                cash = totalAmount;
+                upi = 0;
+
+            } else if (paymentMethod === "UPI") {
+
+                cash = 0;
+                upi = totalAmount;
+
+            } else if (paymentMethod === "CARD") {
+
+                cash = 0;
+                upi = 0;
+
+            } else if (paymentMethod === "SPLIT") {
+
+                cash = Number(cashAmount || 0);
+                upi = Number(upiAmount || 0);
+
+                if (cash < 0 || upi < 0) {
+
+                    alert(
+                        "Payment amounts cannot be negative."
+                    );
+
+                    return;
+                }
+
+                if (Math.abs((cash + upi) - totalAmount) > 0.01) {
+
+                    alert(
+                        `Cash + UPI must equal ₹${totalAmount}.`
+                    );
+
+                    return;
+                }
+            }
+
             await makePayment({
+
                 sessionId: selectedSession,
-                paymentMethod: paymentMethod
+
+                paymentMethod: paymentMethod,
+
+                cashAmount: cash,
+
+                upiAmount: upi
+
             });
 
-            const dashboardResponse = await getSessionDashboard();
+            const dashboardResponse =
+                await getSessionDashboard();
 
             setSessionDashboard({
-                runningSessions: dashboardResponse.data.runningSessions,
-                paymentPendingSessions: dashboardResponse.data.paymentPendingSessions,
-                completedSessions: dashboardResponse.data.completedSessions,
-                todayCollection: dashboardResponse.data.todayCollection
+
+                runningSessions:
+                dashboardResponse.data.runningSessions,
+
+                paymentPendingSessions:
+                dashboardResponse.data.paymentPendingSessions,
+
+                completedSessions:
+                dashboardResponse.data.completedSessions,
+
+                todayCollection:
+                dashboardResponse.data.todayCollection
+
             });
 
-            setSessions(dashboardResponse.data.sessions);
+            setSessions(
+                dashboardResponse.data.sessions
+            );
 
-
-            const resourceResponse = await getAllResources();
+            const resourceResponse =
+                await getAllResources();
 
             setAvailableResources(
                 resourceResponse.data.filter(
-                    resource => resource.status === "AVAILABLE"
+                    resource =>
+                        resource.status === "AVAILABLE"
                 )
             );
 
             setPaymentMethod("CASH");
+
+            setCashAmount("");
+
+            setUpiAmount("");
+
             setShowPaymentModal(false);
 
         } catch (error) {
 
-            console.error(error);
+            console.error(
+                "Payment failed:",
+                error
+            );
 
-            alert("Payment failed.");
-
+            alert(
+                error.response?.data?.message ||
+                "Payment failed."
+            );
         }
-
     };
 
     const formatDateTime = (dateTime) => {
@@ -421,6 +509,21 @@ function Sessions() {
                         className="btn btn-primary btn-sm me-2"
                         onClick={async () => {
 
+                            const result = await Swal.fire({
+                                title: "End Session?",
+                                text: `Are you sure you want to end ${session.resource?.name || "this"} session?`,
+                                icon: "warning",
+                                showCancelButton: true,
+                                confirmButtonColor: "#0d6efd",
+                                cancelButtonColor: "#6c757d",
+                                confirmButtonText: "Yes, End Session",
+                                cancelButtonText: "Cancel"
+                            });
+
+                            if (!result.isConfirmed) {
+                                return;
+                            }
+
                             try {
 
                                 await endSessionAPI(session.id);
@@ -515,7 +618,8 @@ function Sessions() {
                         setNewSession({
                             customerId: "",
                             customerName: "",
-                            resource: ""
+                            resource: "",
+                            playerCount: 1
                         });
 
                         setShowModal(true);
@@ -838,9 +942,13 @@ function Sessions() {
 
                                 </div>
 
-                                {/* PS5 Player Count */}
+                                {/* Player Count */}
 
-                                {newSession.resource.startsWith("PS5") && (
+                                {(
+                                    newSession.resource.startsWith("PS5") ||
+                                    newSession.resource.startsWith("PS4") ||
+                                    newSession.resource.startsWith("Table")
+                                ) && (
 
                                     <div className="mb-3">
 
@@ -848,26 +956,88 @@ function Sessions() {
                                             👥 Number of Players
                                         </label>
 
-                                        <select
-                                            className="form-select"
-                                            value={newSession.playerCount}
-                                            onChange={(e) =>
-                                                setNewSession({
-                                                    ...newSession,
-                                                    playerCount: Number(e.target.value)
-                                                })
-                                            }
-                                        >
+                                        <div className="d-flex align-items-center gap-3">
 
-                                            <option value={1}>1 Player</option>
+                                            {/* Minus */}
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-secondary"
+                                                onClick={() =>
+                                                    setNewSession({
+                                                        ...newSession,
+                                                        playerCount: Math.max(
+                                                            1,
+                                                            newSession.playerCount - 1
+                                                        )
+                                                    })
+                                                }
+                                            >
+                                                −
+                                            </button>
 
-                                            <option value={2}>2 Players</option>
+                                            {/* Player Count */}
+                                            <span
+                                                className="fw-bold fs-4"
+                                                style={{
+                                                    minWidth: "40px",
+                                                    textAlign: "center"
+                                                }}
+                                            >
+                                                {newSession.playerCount}
+                                            </span>
 
-                                            <option value={3}>3 Players</option>
+                                            {/* Plus */}
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-secondary"
+                                                disabled={
+                                                    (
+                                                        newSession.resource.startsWith("PS5") ||
+                                                        newSession.resource.startsWith("PS4")
+                                                    ) &&
+                                                    newSession.playerCount >= 4
+                                                }
+                                                onClick={() =>
+                                                    setNewSession({
+                                                        ...newSession,
+                                                        playerCount:
+                                                            newSession.playerCount + 1
+                                                    })
+                                                }
+                                            >
+                                                +
+                                            </button>
 
-                                            <option value={4}>4 Players</option>
+                                        </div>
 
-                                        </select>
+                                        {/* PS4 / PS5 information */}
+                                        {(newSession.resource.startsWith("PS5") ||
+                                            newSession.resource.startsWith("PS4")) && (
+
+                                            <small className="text-muted d-block mt-2">
+                                                Maximum 4 players
+                                            </small>
+
+                                        )}
+
+                                        {/* Table information */}
+                                        {newSession.resource.startsWith("Table") && (
+                                            <small className="text-muted d-block mt-2">
+
+                                                {newSession.playerCount <= 4 ? (
+                                                    "4 players included"
+                                                ) : (
+                                                    <>
+                                                        {newSession.playerCount - 4} extra player
+                                                        {newSession.playerCount - 4 > 1 ? "s" : ""}
+                                                        {" • Extra charge: ₹"}
+                                                        {(newSession.playerCount - 4) * 50}
+                                                        /hour
+                                                    </>
+                                                )}
+
+                                            </small>
+                                        )}
 
                                     </div>
 
@@ -1036,17 +1206,79 @@ function Sessions() {
                                     Payment Method
                                 </label>
 
+
                                 <select
                                     className="form-select"
                                     value={paymentMethod}
-                                    onChange={(e) =>
-                                        setPaymentMethod(e.target.value)
-                                    }
+                                    onChange={(e) => {
+                                        setPaymentMethod(e.target.value);
+
+                                        // Reset split amounts when changing payment method
+                                        setCashAmount("");
+                                        setUpiAmount("");
+                                    }}
                                 >
                                     <option value="CASH">Cash</option>
                                     <option value="UPI">UPI</option>
                                     <option value="CARD">Card</option>
+                                    <option value="SPLIT">Split Payment</option>
                                 </select>
+
+                                {/* Split Payment */}
+
+                                {paymentMethod === "SPLIT" && selectedSession && (
+
+                                    <div className="mt-4">
+
+                                        <div className="alert alert-info">
+                                            <strong>
+                                                Total Amount: ₹{sessions.find(
+                                                s => s.id === selectedSession
+                                            )?.totalAmount ?? 0}
+                                            </strong>
+                                        </div>
+
+                                        <div className="mb-3">
+
+                                            <label className="form-label fw-semibold">
+                                                Cash Amount
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="form-control"
+                                                placeholder="Enter cash amount"
+                                                value={cashAmount}
+                                                onChange={(e) =>
+                                                    setCashAmount(e.target.value)
+                                                }
+                                            />
+
+                                        </div>
+
+                                        <div className="mb-3">
+
+                                            <label className="form-label fw-semibold">
+                                                 UPI Amount
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                className="form-control"
+                                                placeholder="Enter UPI amount"
+                                                value={upiAmount}
+                                                onChange={(e) =>
+                                                    setUpiAmount(e.target.value)
+                                                }
+                                            />
+
+                                        </div>
+
+                                    </div>
+
+                                )}
 
                             </div>
 
@@ -1160,6 +1392,7 @@ function Sessions() {
                                         ? new Date(selectedSession.endTime).toLocaleString()
                                         : "-"}
                                 </p>
+
 
                                 <p>
                                     <b>Duration :</b>{" "}
